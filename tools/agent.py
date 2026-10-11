@@ -13,6 +13,7 @@ The agent runs until `stop` or the end of the Wine session; `start` is safe to r
 import os
 import subprocess
 import sys
+import tempfile
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -25,7 +26,15 @@ _seq = [int(time.time() * 1000) % 100000000]
 
 
 def call(command, timeout=15):
-    """Send one command; return the response lines without the status line and END. Raises on err/timeout."""
+    """Send one command; return the response lines without the status line and END. Raises on err/timeout.
+    A file lock serializes callers on the Mac (a dashboard and a profiler may share the one agent)."""
+    import fcntl
+    with open(os.path.join(tempfile.gettempdir(), "aoeagent.lock"), "w") as lk:
+        fcntl.flock(lk, fcntl.LOCK_EX)
+        return _call(command, timeout)
+
+
+def _call(command, timeout):
     _seq[0] += 1
     rid = _seq[0]
     loops = int(timeout / 0.05)
