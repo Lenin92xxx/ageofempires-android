@@ -30,7 +30,9 @@ Whether the package still needs it was not tested here; a user on a newer GameNa
 needed (2026-10-10), so the README lists it as a step.
 
 Other devices (user reports, 2026-10-10, not tested here): a Galaxy S25 (Snapdragon 8 Elite) runs the game with this
-setup and the driver `Turnip gen8 v30`.
+setup and the driver `Turnip gen8 v30`. On an Honor Magic V2 (Snapdragon 8 Gen 2, Adreno 740, 2026-10-11) the game
+ran, but frames often came out almost white with the cursor still drawn; `TU_DEBUG=noconform,noubwc` (UBWC off)
+stopped it. The driver in that report is not known, and the Thor never showed the flashing.
 
 ## What was wrong
 

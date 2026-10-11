@@ -115,6 +115,10 @@ folder, but not 2022. The tested setup had it, and a user reports that newer Gam
 - **Other GPUs:** `turnip_v26.0.0_R6` was tested only on the Thor's Adreno 740. A user on a Galaxy S25 (Snapdragon
   8 Elite) runs the game with the driver `Turnip gen8 v30`. On other GPUs, use the driver GameNative recommends for
   yours.
+- **White flashing:** if frames often come out almost white, change the environment variable `TU_DEBUG` from
+  `noconform` (GameNative's default) to `noconform,noubwc`. A user on an Honor Magic V2 (Adreno 740) fixed it this
+  way. `noubwc` turns off the driver's framebuffer compression (UBWC). The Thor never showed the flashing, and which
+  driver the user had is not known.
 
 Details: [AOE2-DE.md](docs/guides/AOE2-DE.md).
 
@@ -219,6 +223,8 @@ benchmark the game's main thread used 95 % of one core: the emulated CPU work li
 - **A window frame:** from the second start on, the game showed in a window with a title bar at 1272 × 694; the
   first start was full screen. Not resolved.
 - **About every 5 minutes a frame of about 0.8 s**, likely the game's single-player autosave.
+- **Almost white frames** (a user report, not seen on the Thor): `TU_DEBUG=noconform,noubwc` fixed them, see
+  [section 3](#3-age-of-empires-ii-de-the-container).
 
 ## How it works
 
