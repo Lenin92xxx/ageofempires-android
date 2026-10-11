@@ -327,7 +327,7 @@ Which patch is which: [patches/fex](patches/fex#upstream-2026-10-08). The driver
 
 Getting here took about three days: what AoE IV's protection checks, what was ruled out, and every measurement.
 **[docs/STORY.md](docs/STORY.md)** tells it in order, with the FPS of every step; [CHANGELOG.md](CHANGELOG.md) lists
-the releases and their files.
+the releases and their files. [docs/README.md](docs/README.md) is the index of all the docs.
 
 | Folder | What is in it |
 |---|---|
