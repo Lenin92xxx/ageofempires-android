@@ -1,17 +1,18 @@
 # Upstream: what was reported where
 
-The fixes that belong in FEX, Wine or Mesa, and where each one stands. Reports filed on 2026-10-08; Wine's source was
+The fixes that belong in FEX, Wine or Mesa, and where each one stands (status checked 2026-10-12). Reports filed on
+2026-10-08; Wine's source was
 checked at master `63f62f7cd696` and FEX's at main `14c92681f` (FEX-2610) first. Per-patch details:
 [patches/fex](../../patches/fex).
 
 | Fix | Upstream | Status |
 |---|---|---|
-| FEX patch 0015 (a 32-bit value loaded as 64 bits in `CheckCall`) | FEX pull request [#6021](https://github.com/FEX-Emu/FEX/pull/6021), with a second fix found while porting it (`CheckCall`'s bound used `b.hi`, which let an offset equal to the table size through; `b.hs`) | Filed 2026-10-08; no later status check is recorded. Both fixes built on upstream main; a build of this package plus `b.hs` ran AoE II DE (menu, its ranked benchmark, score 1079.3) and AoE IV (skirmish, 41.2 / 41.4 FPS) |
-| FEX patches 0012 and 0014 (the instruction stepper) | FEX issue [#6022](https://github.com/FEX-Emu/FEX/issues/6022), asking how the maintainers want it before a clean PR | Filed 2026-10-08; no later status check is recorded |
-| FEX patch 0004 (the SMC write trap is visible to the guest) | FEX issue [#6023](https://github.com/FEX-Emu/FEX/issues/6023); reproducer [`tools/probes/smcquery.c`](../../tools/probes/smcquery.c) | Filed 2026-10-08; no later status check is recorded. The original draft is [Appendix A](#appendix-a-fex-issue-6023-the-smc-write-trap-is-observable-by-the-guest) |
-| FEX patch 0006 (registers after a raw x64 `syscall`) | Wine bug [60461](https://bugs.winehq.org/show_bug.cgi?id=60461): the cause is Wine's `invoke_arm64ec_syscall`, still the same in master | Filed 2026-10-08; no later status check is recorded |
-| FEX patch 0016 (CPU-speed query) | Wine bug [60462](https://bugs.winehq.org/show_bug.cgi?id=60462): `NtPowerInformation(ProcessorInformation)` opens two cpufreq files per CPU per call in master | Filed 2026-10-08; no later status check is recorded |
-| FEX patch 0007 (Wine's ARM64EC export stubs fail the hook check) | Wine bug [60463](https://bugs.winehq.org/show_bug.cgi?id=60463) | Filed 2026-10-08; no later status check is recorded. The text is [Appendix B](#appendix-b-wine-bug-60463-arm64ec--import-exports-start-with-a-bare-x64-jmp-ripx) |
+| FEX patch 0015 (a 32-bit value loaded as 64 bits in `CheckCall`) | FEX pull request [#6021](https://github.com/FEX-Emu/FEX/pull/6021), with a second fix found while porting it (`CheckCall`'s bound used `b.hi`, which let an offset equal to the table size through; `b.hs`) | **Merged 2026-10-12** as `94ff2b0c6`. Not in a FEX release yet (FEX-2610 does not have it), so the package keeps patch 0015 until it is rebased on a release that does. Both fixes built on upstream main; a build of this package plus `b.hs` ran AoE II DE (menu, its ranked benchmark, score 1079.3) and AoE IV (skirmish, 41.2 / 41.4 FPS) |
+| FEX patches 0012 and 0014 (the instruction stepper) | FEX issue [#6022](https://github.com/FEX-Emu/FEX/issues/6022), asking how the maintainers want it before a clean PR | Filed 2026-10-08. Open on 2026-10-12; the one question (which game) was answered on 2026-10-08 |
+| FEX patch 0004 (the SMC write trap is visible to the guest) | FEX issue [#6023](https://github.com/FEX-Emu/FEX/issues/6023); reproducer [`tools/probes/smcquery.c`](../../tools/probes/smcquery.c) | Filed 2026-10-08. Open on 2026-10-12, no comments yet. The original draft is [Appendix A](#appendix-a-fex-issue-6023-the-smc-write-trap-is-observable-by-the-guest) |
+| FEX patch 0006 (registers after a raw x64 `syscall`) | Wine bug [60461](https://bugs.winehq.org/show_bug.cgi?id=60461): the cause is Wine's `invoke_arm64ec_syscall`, still the same in master | Filed 2026-10-08. UNCONFIRMED on 2026-10-12, no change since filing |
+| FEX patch 0016 (CPU-speed query) | Wine bug [60462](https://bugs.winehq.org/show_bug.cgi?id=60462): `NtPowerInformation(ProcessorInformation)` opens two cpufreq files per CPU per call in master | Filed 2026-10-08. UNCONFIRMED on 2026-10-12, no change since filing |
+| FEX patch 0007 (Wine's ARM64EC export stubs fail the hook check) | Wine bug [60463](https://bugs.winehq.org/show_bug.cgi?id=60463) | Filed 2026-10-08. UNCONFIRMED on 2026-10-12, no change since filing. The text is [Appendix B](#appendix-b-wine-bug-60463-arm64ec--import-exports-start-with-a-bare-x64-jmp-ripx) |
 | FEX patch 0010 (resume without a wineserver round trip) | Not reported: the round trip is gone in Proton 11.0-2 and Wine master (`NtContinueEx` only calls the server for alertable continues) | With the Wine the package runs on (11.0-99) it still helps |
 | FEX patch 0017 (exceptions without a host trap) | Not reported yet | |
 | FEX patches 0009, 0013, 0002, 0008 | Not proposed: 0009 is unsafe in general, 0013 is a tuning constant, 0002 hid FEX from the game, 0008 is an analysis tool | |

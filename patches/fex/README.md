@@ -33,7 +33,7 @@ Where each problem was reported or proposed. Wine's source was checked at master
 
 | Patch | Upstream |
 |---|---|
-| 0015 | FEX pull request [#6021](https://github.com/FEX-Emu/FEX/pull/6021), with a second fix found while porting it: `CheckCall`'s bound used `b.hi`, which let an offset equal to the table size through and read one entry past the end (`b.hs`). Both built on upstream main; a build of this package plus `b.hs` ran AoE II DE (menu, its ranked benchmark, score 1079.3) and AoE IV (skirmish, 41.2 / 41.4 FPS). |
+| 0015 | FEX pull request [#6021](https://github.com/FEX-Emu/FEX/pull/6021), **merged 2026-10-12** as `94ff2b0c6` (not in FEX-2610; the package keeps 0015 until it moves to a release that has it), with a second fix found while porting it: `CheckCall`'s bound used `b.hi`, which let an offset equal to the table size through and read one entry past the end (`b.hs`). Both built on upstream main; a build of this package plus `b.hs` ran AoE II DE (menu, its ranked benchmark, score 1079.3) and AoE IV (skirmish, 41.2 / 41.4 FPS). |
 | 0012, 0014 | FEX issue [#6022](https://github.com/FEX-Emu/FEX/issues/6022), asking how the maintainers want it before a clean PR. |
 | 0004 | FEX issue [#6023](https://github.com/FEX-Emu/FEX/issues/6023). Its reproducer is [`tools/probes/smcquery.c`](../../tools/probes/smcquery.c): with GameNative's FEX-2512 a fresh RWX page reads `0x40` before its code runs and `0x20` after; with this package it stays `0x40` (AoE II container session, 2026-10-08). |
 | 0006 | Wine bug [60461](https://bugs.winehq.org/show_bug.cgi?id=60461): the cause is Wine's `invoke_arm64ec_syscall`, still the same in master. |

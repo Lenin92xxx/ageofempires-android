@@ -325,7 +325,8 @@ window on a replay; [`tools/fpsgraph.py`](tools/fpsgraph.py) shows a live frame-
 ## Upstream
 
 The fixes that belong in FEX or Wine were reported there on 2026-10-08: FEX pull request
-[#6021](https://github.com/FEX-Emu/FEX/pull/6021) and issues [#6022](https://github.com/FEX-Emu/FEX/issues/6022) and
+[#6021](https://github.com/FEX-Emu/FEX/pull/6021) (patch 0015, merged 2026-10-12, not yet in a FEX release) and
+issues [#6022](https://github.com/FEX-Emu/FEX/issues/6022) and
 [#6023](https://github.com/FEX-Emu/FEX/issues/6023); Wine bugs [60461](https://bugs.winehq.org/show_bug.cgi?id=60461),
 [60462](https://bugs.winehq.org/show_bug.cgi?id=60462) and [60463](https://bugs.winehq.org/show_bug.cgi?id=60463).
 Which patch is which: [patches/fex](patches/fex#upstream-2026-10-08). The driver's gain comes from Mesa merge request
