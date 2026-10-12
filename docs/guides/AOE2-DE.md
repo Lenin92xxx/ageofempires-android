@@ -34,6 +34,14 @@ setup and the driver `Turnip gen8 v30`. On an Honor Magic V2 (Snapdragon 8 Gen 2
 ran, but frames often came out almost white with the cursor still drawn; `TU_DEBUG=noconform,noubwc` (UBWC off)
 stopped it. The driver in that report is not known, and the Thor never showed the flashing.
 
+The same user later reported a tuned setup (2026-10-12): this repo's setup plus GameNative's DXVK async cache on,
+the container's CPU list set to cores 3 to 7 (the Snapdragon 8 Gen 2's big cores; cores 0 to 2 are its little
+cores), the FEXCore preset PERFORMANCE and `TU_DEBUG=noconform,noubwc`, at 1024 × 768. Result: faster loading and a
+steady 40 FPS with the frame rate capped at 40, so it shows nothing about the top speed. With `FEX_TSOENABLED=0` the
+preset adds little (README, section 3). The CPU list and the async cache were not measured here; for AoE IV,
+moving its 8 `rcss worker` threads to cores 3 to 7 gave more long frames ([TUNING.md](TUNING.md)). AoE II DE is no
+longer installed on the test Thor (2026-10-12), so these reports are not retested.
+
 ## What was wrong
 
 1. **The start-up crash.** With the known config (`proton-9.0-arm64ec`, FEXCore 2512) the game process lived about

@@ -119,8 +119,16 @@ folder, but not 2022. The tested setup had it, and a user reports that newer Gam
   `noconform` (GameNative's default) to `noconform,noubwc`. A user on an Honor Magic V2 (Adreno 740) fixed it this
   way. `noubwc` turns off the driver's framebuffer compression (UBWC). The Thor never showed the flashing, and which
   driver the user had is not known.
+- **FEXCore preset:** with `FEX_TSOENABLED=0` set, the preset makes little difference. GameNative applies the
+  container's environment after the preset, so the variable wins, and FEX then turns its vector and memcpy TSO
+  options off too. What is left between the presets is x87 reduced precision (on from INTERMEDIATE up), which a
+  64-bit game seldom uses, multiblock (off only in STABILITY), and two more options in EXTREME. Read in the source
+  (GameNative's `FEXCorePresetManager`, FEX `7d3090f`), not measured.
+- **Box64 preset:** FEXCore runs this 64-bit game with the ARM64EC Wine build, so the Box64 preset should not
+  affect it (not measured).
 
-Details: [AOE2-DE.md](docs/guides/AOE2-DE.md).
+A user's tuned setup (faster loading, a steady 40 FPS with a 40 FPS cap) is in
+[AOE2-DE.md](docs/guides/AOE2-DE.md), with the other details.
 
 ### 4. Device settings
 
