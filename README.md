@@ -34,7 +34,7 @@ the drivers in circulation.
   Snapdragon 8 Gen 2 devices are the most likely to work.
 - The game on Steam, installed through GameNative.
 - From the [latest release](https://github.com/tarikbc/ageofempires-android/releases/latest):
-  - `fexcore-aoe4-perf6.wcp` (900 KB), the patched FEX for AoE IV (v1.4.0, with patch 0017). For AoE II DE use
+  - `fexcore-aoe4-perf7.wcp` (900 KB), the patched FEX for AoE IV (v1.6.0, with patch 0017). For AoE II DE use
     `fexcore-aoe4-perf5.wcp` from the same release: that is the package tested with AoE II.
   - For AoE IV: `turnip-main-c78a9e9-ubwc.zip` (2.7 MB), Mesa's Turnip driver built from its 2026-10-08 main branch
     with one patch (v1.5.0; [GPU-DRIVER.md](docs/how-it-works/GPU-DRIVER.md), [UBWC.md](docs/how-it-works/UBWC.md)).
@@ -43,12 +43,12 @@ the drivers in circulation.
 
 ### 1. Install the package and the driver
 
-1. Download [`fexcore-aoe4-perf6.wcp`](https://github.com/tarikbc/ageofempires-android/releases/latest/download/fexcore-aoe4-perf6.wcp)
+1. Download [`fexcore-aoe4-perf7.wcp`](https://github.com/tarikbc/ageofempires-android/releases/latest/download/fexcore-aoe4-perf7.wcp)
    (AoE IV), [`fexcore-aoe4-perf5.wcp`](https://github.com/tarikbc/ageofempires-android/releases/latest/download/fexcore-aoe4-perf5.wcp)
    (AoE II DE) and, for AoE IV, [`turnip-main-c78a9e9-ubwc.zip`](https://github.com/tarikbc/ageofempires-android/releases/latest/download/turnip-main-c78a9e9-ubwc.zip)
    on the device; they land in the Download folder.
 2. In GameNative: **Menu → Settings → Contents Manager → Import .wcp from device**, and pick the `.wcp`.
-   They show up under the FEXCore type as `aoe4-perf6 (30)` and `aoe4-perf5 (23)`.
+   They show up under the FEXCore type as `aoe4-perf7 (32)` and `aoe4-perf5 (23)`.
 3. For AoE IV: **Menu → Settings → Driver Manager → Import ZIP from device**, and pick the driver zip.
 
 ### 2. Age of Empires IV: the container
@@ -63,19 +63,23 @@ Open the game in GameNative, tap the **cog** next to Play, then **Edit container
 | Graphics | Graphics Driver / Version | `Wrapper` / **`turnip-main-c78a9e9-ubwc`** |
 | Graphics | DX Wrapper | `VKD3D` |
 | Emulation | 64-bit Emulator | `FEXCore` |
-| Emulation | FEXCore Version | **`aoe4-perf6-30`** |
+| Emulation | FEXCore Version | **`aoe4-perf7-32`** |
 | Environment | add `WINEDEBUG` | `-all` |
 | Environment | add `FEX_EXP_SKIP_CALLRET_RESET` | `1` |
 | Environment | add `VKD3D_CONFIG` | `no_staggered_submit` |
 | Environment | add `TU_UBWC_RGBA8_IGNORE_R32` | `1` |
 | Environment | add `TU_UBWC_RGBA16F_INT` | `1` |
+| Environment | add `DXVK_CONFIG` | `dxgi.customVendorId=1002` |
 
 Then tap **Save** (top right). What the variables do: `WINEDEBUG=-all` stops Wine's debug output even when
 GameNative's Wine debug setting is on; `FEX_EXP_SKIP_CALLRET_RESET=1` turns on patch 0009 (on 2026-10-07, before the
 later speed patches, it took a match from 8 to 23 to 30 FPS); `VKD3D_CONFIG=no_staggered_submit` stops vkd3d-proton
 from holding each GPU submission until the previous one finished (+12 % FPS,
 [VKD3D-SUBMIT.md](docs/how-it-works/VKD3D-SUBMIT.md)); the two `TU_UBWC_` variables let the patched driver keep its
-framebuffer compression on the game's largest colour images (+1.5 FPS (+2.6 %), [UBWC.md](docs/how-it-works/UBWC.md)).
+framebuffer compression on the game's largest colour images (+1.5 FPS (+2.6 %), [UBWC.md](docs/how-it-works/UBWC.md));
+`DXVK_CONFIG=dxgi.customVendorId=1002` makes the graphics adapter report AMD's vendor ID, so the game reads a driver
+version through AMD's library and Proton's ADL and stops showing its "unable to determine your video card's installed
+driver version" dialog (no FPS change, [DRIVER-CHECK.md](docs/how-it-works/DRIVER-CHECK.md)).
 Why each setting: [TUNING.md](docs/guides/TUNING.md).
 
 | | |
@@ -83,7 +87,7 @@ Why each setting: [TUNING.md](docs/guides/TUNING.md).
 | ![General tab](docs/img/setup-general.jpg) | ![Emulation tab](docs/img/setup-emulation.jpg) |
 | ![Graphics tab](docs/img/setup-graphics.jpg) | ![Environment tab, the variables at the bottom](docs/img/setup-environment.jpg) |
 
-The screenshots are from v1.2.0 to v1.4.0: select `aoe4-perf6-30`, the driver `turnip-main-c78a9e9-ubwc` and add the two
+The screenshots are from v1.2.0 to v1.4.0: select `aoe4-perf7-32`, the driver `turnip-main-c78a9e9-ubwc` and add the two
 `TU_UBWC_` variables.
 
 **About the Wine version:** the tested one is listed on the Thor as `proton-11.0-99-arm64ec-1`. It came from a
@@ -212,9 +216,15 @@ benchmark the game's main thread used 95 % of one core: the emulated CPU work li
   2026-10-08, on every driver). Start it again; the next start worked each time.
 - **Do not stay long in GameNative's Quick Menu during a match.** It pauses the game; after a 24 s pause the game
   exited once (a 9 s pause was fine).
-- **A "video card's installed driver version" dialog** can block loading after its one-day "Don't show this
-  message" choice expires. GameNative's touch input did not reach its button in our tests; the repo's helper
-  `tools/probes/dlgclick` clicks it from adb ([LOG.md](docs/research/LOG.md), Traps).
+- **The "unable to determine your video card's installed driver version" dialog** is gone with
+  `DXVK_CONFIG=dxgi.customVendorId=1002` (v1.6.0, [DRIVER-CHECK.md](docs/how-it-works/DRIVER-CHECK.md)). Without it
+  the game shows it at most once a day, and both buttons do the same; GameNative's touch input did not reach them in
+  our tests, and the repo's helper `tools/probes/dlgclick` clicks it from adb.
+- **Deleting a driver can switch the game to another one.** GameNative's Driver Manager resets every container whose
+  driver name *contains* the deleted name to its default driver: deleting the old `turnip-main-c78a9e9` also reset a
+  container on `turnip-main-c78a9e9-ubwc` (2026-10-12; `AdrenotoolsManager.reloadContainers` compares with
+  `contains`). The game then ran at about 50 FPS with the GPU busy 70 %. After deleting drivers, check the
+  container's Graphics Driver Version.
 - **GameNative's "Save Conflict" dialog** asks which save to keep when the local and the cloud save both changed.
   Pick the one from where you played last.
 - **Other graphics drivers:** StevenMXZ's Turnip v26.2.0 R4 and v26.3.0-R6 run the game at 41 FPS, purple-turnip
@@ -305,7 +315,8 @@ All against FEX `7d3090f`, in this order ([patches/fex](patches/fex)):
 | 0016 | Answers the game's per-frame CPU-speed query from a 250 ms cache (v1.2.0) |
 | 0017 | Delivers the protection's illegal-instruction exceptions (about 44,000 per second) without a host trap (v1.4.0) |
 
-The package's DLL is `libarm64ecfex.dll`, SHA-1 `7e707379` in `aoe4-perf6` (v1.4.0; `b5e6e357` in `aoe4-perf5`, which stops at 0016). Since v1.1.0 the package leaves out patch 0002, which hid
+The package's DLL is `libarm64ecfex.dll`, SHA-1 `091ad9ef` in `aoe4-perf7` (v1.6.0; `7e707379` in `aoe4-perf6` of v1.4.0 and
+v1.5.0, whose 0017 reported execute faults as illegal instructions; `b5e6e357` in `aoe4-perf5`, which stops at 0016). Since v1.1.0 the package leaves out patch 0002, which hid
 FEX's name from the game: the game runs the same without it. To build it yourself:
 [BUILDING.md](docs/guides/BUILDING.md) and [`tools/make_fex_wcp.py`](tools/make_fex_wcp.py). The driver:
 [`tools/build_turnip.sh`](tools/build_turnip.sh).
@@ -329,7 +340,9 @@ The fixes that belong in FEX or Wine were reported there on 2026-10-08: FEX pull
 issues [#6022](https://github.com/FEX-Emu/FEX/issues/6022) and
 [#6023](https://github.com/FEX-Emu/FEX/issues/6023); Wine bugs [60461](https://bugs.winehq.org/show_bug.cgi?id=60461),
 [60462](https://bugs.winehq.org/show_bug.cgi?id=60462) and [60463](https://bugs.winehq.org/show_bug.cgi?id=60463).
-Which patch is which: [patches/fex](patches/fex#upstream-2026-10-08). The driver's gain comes from Mesa merge request
+Patch 0017's trap-less part followed on 2026-10-12 as pull request
+[#6034](https://github.com/FEX-Emu/FEX/pull/6034). Which patch is which: [patches/fex](patches/fex#upstream-2026-10-08).
+The driver's gain comes from Mesa merge request
 [!44838](https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/44838), already upstream.
 
 ## The whole story

@@ -10,12 +10,13 @@ kept. The setup itself (where to click) is in the [README](../../README.md#setup
 | Setting | Where | Value | Why |
 |---|---|---|---|
 | Display refresh rate | Thor quick settings, before the game starts | 120 Hz | Frames wait for the next 8.3 ms step instead of 16.7 ms; long frames almost disappear (below) |
-| FEX package | container, Emulation | `aoe4-perf6-30` | The protection fixes and the speed patches ([patches/fex](../../patches/fex)) |
+| FEX package | container, Emulation | `aoe4-perf7-32` | The protection fixes and the speed patches ([patches/fex](../../patches/fex)) |
 | Graphics driver | container, Graphics | `turnip-main-c78a9e9-ubwc` | +27 % FPS ([GPU-DRIVER.md](../how-it-works/GPU-DRIVER.md)); the v1.5.0 build adds one patch |
 | `TU_UBWC_RGBA8_IGNORE_R32`, `TU_UBWC_RGBA16F_INT` | container, Environment | `1` each | The patched driver keeps UBWC on the game's largest colour images: +1.5 FPS (+2.6 %) ([UBWC.md](../how-it-works/UBWC.md)) |
 | `VKD3D_CONFIG` | container, Environment | `no_staggered_submit` | +12 % FPS in the skirmish, a less even late game ([VKD3D-SUBMIT.md](../how-it-works/VKD3D-SUBMIT.md)) |
 | `FEX_EXP_SKIP_CALLRET_RESET` | container, Environment | `1` | Turns on patch 0009. On 2026-10-07, before patches 0012 to 0014, the match HUD read 8.0 FPS without it and 22.8 to 29.5 with it, both with TSO off ([LOG.md](../research/LOG.md), "Speed before 0012/0013"). Not re-measured on the current package |
 | `WINEDEBUG` | container, Environment | `-all` | Keeps Wine's debug output off even when GameNative's Wine debug setting is on (below) |
+| `DXVK_CONFIG` | container, Environment | `dxgi.customVendorId=1002` | The adapter reports AMD's vendor ID, so the game reads a driver version and drops its driver-version dialog; no FPS change ([DRIVER-CHECK.md](../how-it-works/DRIVER-CHECK.md)) |
 | Power profile, CPU | container power profile | scaling, 307 MHz to 3187 MHz, `SCHEDUTIL` | Holding the maximum gave no FPS and no lower temperature; a cap near 2 GHz cost the late game 36.0 → 27.8 FPS (below) |
 | Power profile, GPU | container power profile | levels 8 and 8 (680 MHz) | About +2 FPS in the late game, nothing in the early game (below) |
 | Game graphics | game settings | 1280 × 720, render scale 100 %, `verticalsync` off, `frameratelimit` 0 | As found; a 75 % render scale gave +2 FPS in the late game but a softer picture and more long frames |

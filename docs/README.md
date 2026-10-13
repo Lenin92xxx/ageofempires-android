@@ -30,6 +30,7 @@ In the order they were found:
 | [VKD3D-SUBMIT.md](how-it-works/VKD3D-SUBMIT.md) | `VKD3D_CONFIG=no_staggered_submit` | More than one command buffer in flight: 52 → 58 FPS |
 | [TRAPLESS-FAULTS.md](how-it-works/TRAPLESS-FAULTS.md) | patch 0017 | The protection's 44,000 exceptions per second without a host trap: +1.5 FPS |
 | [UBWC.md](how-it-works/UBWC.md) | Turnip patch 0001, two variables | The game's largest colour images keep UBWC compression: +1.5 FPS (+2.6 %) |
+| [DRIVER-CHECK.md](how-it-works/DRIVER-CHECK.md) | `DXVK_CONFIG=dxgi.customVendorId=1002` | The "unable to determine your video card's installed driver version" dialog is gone; no FPS change |
 
 Patches 0002 (dropped) and 0015 (a FEX bug fix) are described in [patches/fex](../patches/fex).
 

@@ -14,7 +14,7 @@ checked at master `63f62f7cd696` and FEX's at main `14c92681f` (FEX-2610) first.
 | FEX patch 0016 (CPU-speed query) | Wine bug [60462](https://bugs.winehq.org/show_bug.cgi?id=60462): `NtPowerInformation(ProcessorInformation)` opens two cpufreq files per CPU per call in master | Filed 2026-10-08. UNCONFIRMED on 2026-10-12, no change since filing |
 | FEX patch 0007 (Wine's ARM64EC export stubs fail the hook check) | Wine bug [60463](https://bugs.winehq.org/show_bug.cgi?id=60463) | Filed 2026-10-08. UNCONFIRMED on 2026-10-12, no change since filing. The text is [Appendix B](#appendix-b-wine-bug-60463-arm64ec--import-exports-start-with-a-bare-x64-jmp-ripx) |
 | FEX patch 0010 (resume without a wineserver round trip) | Not reported: the round trip is gone in Proton 11.0-2 and Wine master (`NtContinueEx` only calls the server for alertable continues) | With the Wine the package runs on (11.0-99) it still helps |
-| FEX patch 0017 (exceptions without a host trap) | Not reported yet | |
+| FEX patch 0017 (exceptions without a host trap) | FEX pull request [#6034](https://github.com/FEX-Emu/FEX/pull/6034): the trap-less part only, rewritten for current main (no counters, switches or fast raise) | Opened 2026-10-12. Tested on the Thor with an exception probe: identical exception records, and 0.86 µs instead of 1.82 µs per `ud2` on the package's other patches |
 | FEX patches 0009, 0013, 0002, 0008 | Not proposed: 0009 is unsafe in general, 0013 is a tuning constant, 0002 hid FEX from the game, 0008 is an analysis tool | |
 | The driver's gain | Mesa merge request [!44838](https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/44838) (not ours), merged 2026-10-08 | Upstream; the repo's driver is a build of Mesa main that contains it |
 

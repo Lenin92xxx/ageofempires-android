@@ -28,6 +28,7 @@ setting, and patch 0017 (measured after a change to the benchmark's thermal samp
 | 2026-10-08 16:30 | + `VKD3D_CONFIG=no_staggered_submit` | **58.6 / 58.1** | 47.3 and 48.5, less even |
 | 2026-10-09 02:49 | **v1.4.0**: + 0017 | 58.3 / 57.8 against 56.4 / 56.3 for v1.3.0 + vkd3d in the same session | not measured |
 | 2026-10-09 15:45 | **v1.5.0**: driver patch for colour compression, two variables | 60.1 / 59.6 against 58.1 / 58.6, alternating (GameNative 1.3.0) | not measured |
+| 2026-10-13 00:13 | **v1.6.0**: 0017 fixed, driver dialog gone (`DXVK_CONFIG`) | **61.6** (minute 1, GPU busy 97 %); 49.5 against 49.8 for v1.5.0 on the default driver after a container reset (README) | not measured |
 
 Skirmish: an automated 1v1 with the camera turning, FPS from Android's compositor in 90 s windows at two match
 minutes ([TESTING.md](guides/TESTING.md)). Late game: the replay of a full 51-minute game, minutes 46 and 48. Numbers
@@ -177,6 +178,7 @@ The main FEX builds along the way, with the DLL's SHA-1. Released packages are i
 | `aoe4-perf4-22` | | a first 0016 build | froze at start, removed |
 | **`aoe4-perf5-23`** (v1.2.0, v1.3.0; AoE II DE) | `b5e6e357` | + 0016 | late game +0.7 / +0.3 FPS |
 | **`aoe4-perf6-30`** (v1.4.0) | `7e707379` | + 0017 | +1.5 FPS |
+| **`aoe4-perf7-32`** (v1.6.0) | `091ad9ef` | 0017 reports execute faults correctly | same speed as `aoe4-perf6-30` |
 
 The patch files and their status: [patches/fex](../patches/fex).
 

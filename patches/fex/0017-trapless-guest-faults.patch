@@ -54,7 +54,7 @@
      // brk = SIGTRAP
 --- a/Source/Windows/ARM64EC/Module.cpp
 +++ b/Source/Windows/ARM64EC/Module.cpp
-@@ -779,6 +779,81 @@
+@@ -779,6 +779,89 @@
    ECContext.Fpsr = FPSR;
  
    return ECContext;
@@ -121,8 +121,16 @@
 +  EFlags &= ~(1 << FEXCore::X86State::RFLAG_TF_RAW_LOC);
 +  CTX->SetFlagsFromCompactedEFLAGS(Thread, EFlags);
 +
++  // The exception the stub's host trap would have raised (hlt: SIGILL, brk: SIGTRAP, a null load: SIGSEGV).
++  // HandleGuestException keeps this code for execute faults, so it must match the trap.
 +  EXCEPTION_RECORD HostRec {};
-+  HostRec.ExceptionCode = EXCEPTION_ILLEGAL_INSTRUCTION;
++  if (Fault.Signal == FEXCore::Core::FAULT_SIGILL) {
++    HostRec.ExceptionCode = EXCEPTION_ILLEGAL_INSTRUCTION;
++  } else if (Fault.Signal == FEXCore::Core::FAULT_SIGTRAP) {
++    HostRec.ExceptionCode = EXCEPTION_BREAKPOINT;
++  } else {
++    HostRec.ExceptionCode = EXCEPTION_ACCESS_VIOLATION;
++  }
 +  BOOL FirstChance = TRUE;
 +  EXCEPTION_RECORD GuestRec = FEX::Windows::HandleGuestException(Fault, HostRec, GuestContext.Pc, GuestContext.X8, GuestContext.X0, FirstChance);
 +  if (GuestRec.ExceptionCode == EXCEPTION_SINGLE_STEP) {
@@ -136,7 +144,7 @@
  }
  
  static void RethrowGuestException(const EXCEPTION_RECORD& Rec, ARM64_NT_CONTEXT& Context) {
-@@ -808,9 +883,17 @@
+@@ -808,9 +891,17 @@
      GuestContext.Pc -= 1;
    }
  
@@ -155,7 +163,7 @@
  class ECSyscallHandler : public FEXCore::HLE::SyscallHandler, public FEXCore::Allocator::FEXAllocOperators {
  public:
    ECSyscallHandler() = default;
-@@ -1542,6 +1625,7 @@
+@@ -1542,6 +1633,7 @@
  
    FEX::Windows::CallRetStack::InitializeThread(Thread);
    Thread->CurrentFrame->Pointers.ExitFunctionEC = reinterpret_cast<uintptr_t>(&ExitFunctionEC);

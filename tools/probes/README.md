@@ -20,6 +20,8 @@ result to a file on `D:\`. The ones marked GUI open no console window and can ru
 | `pwrcost` (GUI) | Cost of `CallNtPowerInformation(ProcessorInformation)` the way AoE IV calls it every frame (patch 0016) |
 | `smcquery` (GUI) | The reproducer for FEX issue #6023: whether FEX's SMC write trap shows through `NtQueryVirtualMemory` |
 | `exccost` | Cost of one illegal-instruction exception handled by a vectored handler, as the protection uses them |
+| `settime` | Shows a file's last-write time through `GetFileTime`, `GetFileAttributesEx` and `FindFirstFile`, or sets its times; used to find how AoE IV's start-up warnings decide to show ([DRIVER-CHECK.md](../../docs/how-it-works/DRIVER-CHECK.md)) |
+| `excprobe` | What a vectored handler sees for `ud2`, `int3`, a trap-flag step, `hlt` and a call into a non-executable page, and the cost of a `ud2` and an `int3` round trip; diff its output between two FEX builds ([TRAPLESS-FAULTS.md](../../docs/how-it-works/TRAPLESS-FAULTS.md)) |
 | `fexstats` | Reads patch 0004's SMC-trap counters from the game's `libarm64ecfex.dll` |
 | `xinputprobe` | Which XInput pads Wine sees, and their state for a few seconds |
 

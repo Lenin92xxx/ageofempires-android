@@ -4,6 +4,43 @@ Every release, with what changed, the files and the speed measured for it. AoE I
 skirmish benchmark (FPS at two match minutes, 90 s windows) and the late-game replay (minutes 46 and 48), on the AYN
 Thor with GameNative 1.2.1. How the versions connect: [docs/STORY.md](docs/STORY.md).
 
+## v1.6.0, 2026-10-12: no driver-version dialog, patch 0017 fixed
+
+- **No more "unable to determine your video card's installed driver version" dialog.** Add
+  `DXVK_CONFIG=dxgi.customVendorId=1002` to the AoE IV container's environment. The game queried a driver version
+  only for NVIDIA and AMD GPUs and showed the dialog for the Thor's Qualcomm one (vendor `0x5143`, "Unknown Vendor
+  ID"); with the adapter reported as AMD, its own AGS library reads a version through Proton's ADL and the check
+  passes. Its GPU class stays "Gen7 Only", and FPS did not change
+  ([DRIVER-CHECK.md](docs/how-it-works/DRIVER-CHECK.md)).
+- **New FEX package `aoe4-perf7` (32)**: the v1.4.0 patch set with patch 0017 fixed. 0017's trap-less path passed
+  "illegal instruction" as the host exception for every guest fault, so an execute fault (a jump into
+  non-executable memory) reached the game as an illegal instruction instead of an access violation. AoE IV's own
+  exceptions are all illegal instructions, so the game was not affected; found while porting 0017 to FEX main for
+  pull request [#6034](https://github.com/FEX-Emu/FEX/pull/6034)
+  ([TRAPLESS-FAULTS.md](docs/how-it-works/TRAPLESS-FAULTS.md#fix-in-v160)).
+- Upstream: FEX merged patch 0015 ([#6021](https://github.com/FEX-Emu/FEX/pull/6021)); 0017's trap-less part is
+  proposed as [#6034](https://github.com/FEX-Emu/FEX/pull/6034).
+- The driver (`turnip-main-c78a9e9-ubwc`) and `aoe4-perf5-23` for AoE II DE are unchanged and attached again.
+- New probes: [`excprobe`](tools/probes/excprobe.c) (what a vectored handler sees for five guest faults, and their
+  cost) and [`settime`](tools/probes/settime.c) (a file's times through three Windows APIs).
+
+| Measured on 2026-10-12 | Result |
+|---|---|
+| Exception probe, `aoe4-perf7-32` | call into a non-executable page: access violation (v1.5.0: illegal instruction, then the probe's handler loops); `ud2` 1.30 µs, `int3` 1.12 µs |
+| Skirmish, minute 1, 120 Hz, both with `DXVK_CONFIG` | `aoe4-perf7-32` 49.5 FPS, `aoe4-perf6-30` 49.8 FPS |
+| Skirmish, minute 1, 120 Hz, `aoe4-perf7-32` | 50.4 FPS without `DXVK_CONFIG`, 49.5 with it |
+| Skirmish, minute 1, 120 Hz, the release setup (`aoe4-perf7-32`, `turnip-main-c78a9e9-ubwc`, `DXVK_CONFIG`), 2026-10-13 | **61.6 FPS**, GPU busy 97 % (v1.5.0: 60.1 / 59.6); 23 frames over 50 ms, in the first run after the driver was selected again |
+
+The two skirmish rows are A/B pairs on the same driver, but not on the release's: deleting the old
+`turnip-main-c78a9e9` in GameNative had reset the container to GameNative's default driver (README, Known issues),
+so these windows ran at about 50 FPS with the GPU busy 70 %.
+
+| File | SHA-256 |
+|---|---|
+| `fexcore-aoe4-perf7.wcp` (DLL SHA-1 `091ad9efdaf7ae5729abf0c1b2376f1c55d51008`) | `bb66b4ba24a6e50e021d613ae47b557bbfd9140b2e80f51cebf46ed0508ee3ef` |
+| `turnip-main-c78a9e9-ubwc.zip` (same file as v1.5.0) | `a2c79b49451dbe1b3b240f924727033bf6bdc444907dcacc47d80776606ebb0f` |
+| `fexcore-aoe4-perf5.wcp` (same file as v1.2.0) | `20a32eabd5c3cb50082aa0a8f0fb835d66123b05339c48af4284364f6f90119f` |
+
 ## v1.5.0, 2026-10-09: colour compression, +1.5 FPS (+2.6 %)
 
 - **New driver `turnip-main-c78a9e9-ubwc`**: the v1.3.0 driver (Mesa main `c78a9e9`) plus

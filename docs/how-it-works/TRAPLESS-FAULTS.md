@@ -2,7 +2,8 @@
 
 **Result:** about **+1.5 FPS** in the skirmish benchmark (58.3 / 57.8 against 56.4 / 56.3 and 56.6 / 56.5 for the
 previous package before and after) and about a fifth fewer frames of 25 ms. Frames over 40 ms stayed within their
-spread. Shipped in `aoe4-perf6-30` (DLL `7e707379`, release v1.4.0).
+spread. Shipped in `aoe4-perf6-30` (DLL `7e707379`, release v1.4.0), and with one fix in `aoe4-perf7-32` (DLL `091ad9ef`,
+release v1.6.0, see "Fix in v1.6.0" below).
 
 ## The problem
 
@@ -56,8 +57,34 @@ inside measured frames; now it uses shell builtins. The same setup then read 56.
 before; the cause of that difference was not isolated. Numbers from before and after the change are not comparable;
 inside this table they are.
 
+## Fix in v1.6.0
+
+`FastTrapEntry` passed `EXCEPTION_ILLEGAL_INSTRUCTION` as the host exception for all three stubs. FEX's
+`HandleGuestException` sets the guest code itself for most faults, but for an execute fault (the SIGSEGV stub with a
+page-fault trap number) it keeps the host code. So a jump into non-executable memory reached the guest as an illegal
+instruction (`c000001d`) with the parameters of an execute fault, where the old trap path gave an access violation
+(`c0000005`). The patch now passes what each stub's trap raises: illegal instruction for `hlt`, breakpoint for `brk`
+and access violation for the null load. The game never showed the bug, as its 44,000 exceptions per second are all
+illegal instructions; it was found while porting the patch to FEX main for pull request #6034.
+
+Checked on the Thor on 2026-10-12 with an exception probe that records what a vectored handler sees for `ud2`,
+`int3`, a trap-flag step, `hlt` and a call into a non-executable page, then times 20,000 `ud2` and `int3` round trips:
+
+| Package | Call into a non-executable page | `ud2` | `int3` |
+|---|---|---|---|
+| `aoe4-perf5-23` (no 0017) | access violation | 1.82 µs | 1.69 µs |
+| `aoe4-perf6-30` (v1.4.0, v1.5.0) | **illegal instruction**; the probe's handler then loops | not reached | not reached |
+| `aoe4-perf7-32` (v1.6.0) | access violation | 1.30 µs | 1.12 µs |
+| `aoe4-perf5-23` + the upstream version (trap-less part only, no fast raise) | access violation | 0.86 µs | 0.86 µs |
+
+The other four records match in every package. In this probe the package with the fast raise is slower than the
+version without it; the likely cost is the fast raise's stack check, an `NtQueryVirtualMemory` call per exception (not
+measured on its own). In the game the fast raise had made no measurable difference (see Measurements), so dropping it
+is a candidate for a later package. The probe is [`tools/probes/excprobe.c`](../../tools/probes/excprobe.c).
+
 ## Not tested yet
 
 - The late-game replay with 0017.
-- AoE II DE with `aoe4-perf6-30` (it stays on `aoe4-perf5-23`).
-- Reported upstream: not yet ([UPSTREAM.md](../research/UPSTREAM.md)).
+- AoE II DE with `aoe4-perf6-30` or `aoe4-perf7-32` (it stays on `aoe4-perf5-23`).
+- Reported upstream: the trap-less part as FEX pull request [#6034](https://github.com/FEX-Emu/FEX/pull/6034)
+  (2026-10-12), without the counters, the switches and the fast raise ([UPSTREAM.md](../research/UPSTREAM.md)).
