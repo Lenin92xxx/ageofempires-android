@@ -30,9 +30,9 @@ Thor with GameNative 1.2.1. How the versions connect: [docs/STORY.md](docs/STORY
 | Skirmish, minute 1, 120 Hz, both with `DXVK_CONFIG` | `aoe4-perf7-32` 49.5 FPS, `aoe4-perf6-30` 49.8 FPS |
 | Skirmish, minute 1, 120 Hz, `aoe4-perf7-32` | 50.4 FPS without `DXVK_CONFIG`, 49.5 with it |
 
-All of these ran on a GameNative master build (`a21a96c5c`), where the setup measures about 50 FPS with the GPU
-busy 70 %, against 58 to 60 FPS and 95 % on the 1.3.0 test release of v1.5.0; the cause was not isolated
-(README, Known issues).
+The two skirmish rows are A/B pairs on the same driver, but not on the release's: deleting the old
+`turnip-main-c78a9e9` in GameNative had reset the container to GameNative's default driver (README, Known issues),
+so these windows ran at about 50 FPS with the GPU busy 70 %.
 
 | File | SHA-256 |
 |---|---|

@@ -28,7 +28,7 @@ setting, and patch 0017 (measured after a change to the benchmark's thermal samp
 | 2026-10-08 16:30 | + `VKD3D_CONFIG=no_staggered_submit` | **58.6 / 58.1** | 47.3 and 48.5, less even |
 | 2026-10-09 02:49 | **v1.4.0**: + 0017 | 58.3 / 57.8 against 56.4 / 56.3 for v1.3.0 + vkd3d in the same session | not measured |
 | 2026-10-09 15:45 | **v1.5.0**: driver patch for colour compression, two variables | 60.1 / 59.6 against 58.1 / 58.6, alternating (GameNative 1.3.0) | not measured |
-| 2026-10-12 22:38 | **v1.6.0**: 0017 fixed, driver dialog gone (`DXVK_CONFIG`) | 49.5 against 49.8 for v1.5.0 in the same session (minute 1, both with `DXVK_CONFIG`; a GameNative master build, see README) | not measured |
+| 2026-10-12 22:38 | **v1.6.0**: 0017 fixed, driver dialog gone (`DXVK_CONFIG`) | 49.5 against 49.8 for v1.5.0 in the same session (minute 1, both with `DXVK_CONFIG`, both on the default driver after a container reset, see README) | not measured |
 
 Skirmish: an automated 1v1 with the camera turning, FPS from Android's compositor in 90 s windows at two match
 minutes ([TESTING.md](guides/TESTING.md)). Late game: the replay of a full 51-minute game, minutes 46 and 48. Numbers

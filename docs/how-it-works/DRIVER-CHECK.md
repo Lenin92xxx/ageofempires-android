@@ -74,8 +74,10 @@ Skirmish benchmark, match minute 1, one window each, display at 120 Hz, the same
 | `aoe4-perf7-32` | 50.4 | 69 % |
 | `aoe4-perf7-32` + `DXVK_CONFIG=dxgi.customVendorId=1002` | 49.5 | 70 % |
 
-The difference is within the spread of single windows. Both are below the 58 to 60 FPS of 2026-10-09; a GameNative
-master build was installed in between, and the cause of the drop was not isolated (README, Known issues).
+The difference is within the spread of single windows. Both windows ran on GameNative's default driver, not on
+`turnip-main-c78a9e9-ubwc`: deleting the old `turnip-main-c78a9e9` earlier that day had reset the container
+(README, Known issues), hence about 50 FPS instead of 58 to 60 and the GPU busy 70 %. A pair on the release's driver
+is still to be measured.
 
 ## Not tested yet
 

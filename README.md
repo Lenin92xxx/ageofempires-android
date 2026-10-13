@@ -220,9 +220,11 @@ benchmark the game's main thread used 95 % of one core: the emulated CPU work li
   `DXVK_CONFIG=dxgi.customVendorId=1002` (v1.6.0, [DRIVER-CHECK.md](docs/how-it-works/DRIVER-CHECK.md)). Without it
   the game shows it at most once a day, and both buttons do the same; GameNative's touch input did not reach them in
   our tests, and the repo's helper `tools/probes/dlgclick` clicks it from adb.
-- **About 50 FPS instead of 58 to 60 on a GameNative master build** (`a21a96c5c` of 2026-10-09, also named 1.3.0):
-  on 2026-10-12 the skirmish benchmark gave 50.4 FPS with the GPU busy 70 %, where the same setup gave 58 to 60 FPS
-  with the GPU busy 95 % on the 1.3.0 test release (2026-10-09). The cause was not isolated.
+- **Deleting a driver can switch the game to another one.** GameNative's Driver Manager resets every container whose
+  driver name *contains* the deleted name to its default driver: deleting the old `turnip-main-c78a9e9` also reset a
+  container on `turnip-main-c78a9e9-ubwc` (2026-10-12; `AdrenotoolsManager.reloadContainers` compares with
+  `contains`). The game then ran at about 50 FPS with the GPU busy 70 %. After deleting drivers, check the
+  container's Graphics Driver Version.
 - **GameNative's "Save Conflict" dialog** asks which save to keep when the local and the cloud save both changed.
   Pick the one from where you played last.
 - **Other graphics drivers:** StevenMXZ's Turnip v26.2.0 R4 and v26.3.0-R6 run the game at 41 FPS, purple-turnip
