@@ -130,7 +130,7 @@ Opened during a game. Items used on 2026-10-07:
 ## Recovering from a FEX build that stops every start
 
 GameNative writes the selected content's DLL at every start, so after a bad build, selecting a good content in the
-Emulation tab (`tools/gn_select_fex.py aoe4-perf6-30`) is enough; it takes effect at the next start. On 2026-10-08
+Emulation tab (`tools/gn_select_fex.py aoe4-perf7-32`) is enough; it takes effect at the next start. On 2026-10-08
 `aoe4-perf4-22`, a first build of patch 0016 that froze the game at start, was removed that way and then deleted in
 Contents Manager (FEXCore type, trash icon, Remove).
 

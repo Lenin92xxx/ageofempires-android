@@ -58,15 +58,15 @@ ninja arm64ecfex          # NOT plain ninja, see problem 3
 ```
 
 The build prints its revision (`-- FEX commit: 7d3090f78237267b2adf2d32116f0105b8d665cb`). Artifact:
-`Bin/libarm64ecfex.dll` (about 5.6 MB, `PE32+ executable (DLL) (GUI) x86-64`). That patch list is the v1.4.0 set (`aoe4-perf6`, DLL SHA-1 `7e707379`); v1.2.0 and v1.3.0
-stop at 0016 (`b5e6e357`). A clean build of a released set gives the released DLL except the 4 bytes of the build
+`Bin/libarm64ecfex.dll` (about 5.6 MB, `PE32+ executable (DLL) (GUI) x86-64`). That patch list is the v1.6.0 set (`aoe4-perf7`, DLL SHA-1 `091ad9ef`; v1.4.0 and v1.5.0 shipped
+the earlier 0017 as `aoe4-perf6`, `7e707379`); v1.2.0 and v1.3.0 stop at 0016 (`b5e6e357`). A clean build of a released set gives the released DLL except the 4 bytes of the build
 time stamp (PE header and debug directory); [patches/fex](../../patches/fex) lists which sets were checked that way.
 
 ### Package it as a `.wcp`
 
 ```sh
 # from this repo's folder
-python3 tools/make_fex_wcp.py /path/to/FEX/build/Bin/libarm64ecfex.dll fexcore-aoe4-perf6.wcp --name aoe4-perf6 --code 30
+python3 tools/make_fex_wcp.py /path/to/FEX/build/Bin/libarm64ecfex.dll fexcore-aoe4-perf7.wcp --name aoe4-perf7 --code 32
 ```
 
 A `.wcp` is an xz-compressed tar with `profile.json` and the files it names; it ships only `libarm64ecfex.dll`.
