@@ -3,7 +3,7 @@
 **Result:** with `DXVK_CONFIG=dxgi.customVendorId=1002` in the container's environment, AoE IV no longer shows "We were
 unable to determine your video card's installed driver version". The variable changes only the vendor ID that DXVK's
 `dxgi.dll` reports; the game then reads a driver version and passes its check. FPS did not change (49.5 against 50.4
-in one window each), and the game's GPU class stayed "Gen7 Only".
+in one window each; 61.6 on the release's driver), and the game's GPU class stayed "Gen7 Only".
 
 ## The problem
 
@@ -76,8 +76,8 @@ Skirmish benchmark, match minute 1, one window each, display at 120 Hz, the same
 
 The difference is within the spread of single windows. Both windows ran on GameNative's default driver, not on
 `turnip-main-c78a9e9-ubwc`: deleting the old `turnip-main-c78a9e9` earlier that day had reset the container
-(README, Known issues), hence about 50 FPS instead of 58 to 60 and the GPU busy 70 %. A pair on the release's driver
-is still to be measured.
+(README, Known issues), hence about 50 FPS instead of 58 to 60 and the GPU busy 70 %. On the release's driver with
+the variable, one window on 2026-10-13 gave 61.6 FPS with the GPU busy 97 %, level with v1.5.0's 60.1 and 59.6.
 
 ## Not tested yet
 

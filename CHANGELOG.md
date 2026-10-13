@@ -29,6 +29,7 @@ Thor with GameNative 1.2.1. How the versions connect: [docs/STORY.md](docs/STORY
 | Exception probe, `aoe4-perf7-32` | call into a non-executable page: access violation (v1.5.0: illegal instruction, then the probe's handler loops); `ud2` 1.30 µs, `int3` 1.12 µs |
 | Skirmish, minute 1, 120 Hz, both with `DXVK_CONFIG` | `aoe4-perf7-32` 49.5 FPS, `aoe4-perf6-30` 49.8 FPS |
 | Skirmish, minute 1, 120 Hz, `aoe4-perf7-32` | 50.4 FPS without `DXVK_CONFIG`, 49.5 with it |
+| Skirmish, minute 1, 120 Hz, the release setup (`aoe4-perf7-32`, `turnip-main-c78a9e9-ubwc`, `DXVK_CONFIG`), 2026-10-13 | **61.6 FPS**, GPU busy 97 % (v1.5.0: 60.1 / 59.6); 23 frames over 50 ms, in the first run after the driver was selected again |
 
 The two skirmish rows are A/B pairs on the same driver, but not on the release's: deleting the old
 `turnip-main-c78a9e9` in GameNative had reset the container to GameNative's default driver (README, Known issues),
