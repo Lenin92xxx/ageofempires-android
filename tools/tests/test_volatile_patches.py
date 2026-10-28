@@ -33,6 +33,7 @@ def harness(tree):
     core = (tree / "FEXCore/Source/Interface/Core/Core.cpp").read_text()
     frontend = (tree / "FEXCore/Source/Interface/Core/Frontend.cpp").read_text()
     module = (tree / "Source/Windows/ARM64EC/Module.cpp").read_text()
+    tracker = (tree / "Source/Windows/Common/InvalidationTracker.cpp").read_text()
     sample_start = core.index("uint64_t Sample = 0;", core.index("VolatileCodeStats.ShapeSampleIdx"))
     sample_end = core.index("VolatileCodeStats.ShapeSample[", sample_start)
     sample = core[sample_start:sample_end]
@@ -44,6 +45,18 @@ def harness(tree):
     exc = module[exc_start:exc_end]
     exc_format = re.search(r'Out \+= fextl::fmt::format\([^\n]*Describe\(Exc\[i\][^\n]*;', module).group()
     rip_struct = re.search(r"struct RipStat \{.*?\n\};", module, re.S).group()
+    validation_start = core.find("const auto CodeValidationSize =")
+    if validation_start < 0:
+        validation_start = core.index("if (Config.SMCChecks == FEXCore::Config::CONFIG_SMC_FULL || Block.ForceFullSMCDetection)")
+    validation = core[validation_start:core.index("auto InvalidateCodeCond =", validation_start)] + "}\n"
+    disk_start = core.index("if (Hit && !DiskCache.IsValidating()")
+    disk_end = core.index("(", disk_start)
+    depth = 1
+    disk_end += 1
+    while depth:
+        depth += (core[disk_end] == "(") - (core[disk_end] == ")")
+        disk_end += 1
+    disk_guard = core[disk_start:disk_end] + " {"
     return r'''
 #define FMT_HEADER_ONLY
 #include <fmt/format.h>
@@ -54,6 +67,7 @@ def harness(tree):
 #include <cstring>
 #include <mutex>
 #include <set>
+#include <shared_mutex>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -86,6 +100,89 @@ int NtQueryVirtualMemoryNative(void*, void* address, int kind, void* output, siz
 struct ModuleRec { uint64_t Base, End; fextl::string Name; };
 fextl::vector<ModuleRec> Modules;
 ''' + function(module, "const ModuleRec* FindModule(") + r'''
+namespace FEXCore {
+namespace Config { constexpr int CONFIG_SMC_FULL = 2; }
+namespace Utils {
+constexpr uint64_t FEX_PAGE_MASK = ~uint64_t{4095}, FEX_PAGE_SIZE = 4096;
+uint64_t crc32(const uint8_t* bytes, size_t size) {
+  uint64_t hash = 0;
+  for (size_t i = 0; i < size; ++i) hash = hash * 131 + bytes[i];
+  return hash;
+}
+}
+namespace X86Tables { struct DecodedInst { uint8_t InstSize; }; }
+namespace Frontend {
+struct Decoder {
+  enum class DecodedBlockStatus { SUCCESS, INVALID_INST, UNIMPLEMENTED_INST, NOEXEC_INST, PARTIAL_DECODE_INST };
+  struct DecodedBlocks {
+    uint64_t Entry, Size;
+    bool ForceFullSMCDetection;
+    uint8_t FailExaminedSize;
+    DecodedBlockStatus BlockStatus;
+  };
+  struct DecodedBlockInformation { std::vector<DecodedBlocks> Blocks; };
+};
+}
+}
+namespace Frontend = FEXCore::Frontend;
+''' + function(core, "static inline void HashMix(") + "\n" + function(core, "static inline void HashGuestRange(") + "\n" + function(core, "static uint64_t HashDecodedBlocks(") + r'''
+namespace IR { enum class OpSize { i64Bit }; }
+struct TestDispatcher {
+  uint64_t Length = 0;
+  uint64_t _EntrypointOffset(int, uint64_t address) { return address; }
+  uint64_t _PatchableGuestCRC(IR::OpSize, uint64_t hash, int64_t, uint64_t) { return hash; }
+  uint64_t Constant(uint64_t value) { return value; }
+  uint64_t _ValidateCode(uint64_t, uint64_t, uint64_t size) { Length = size; return 0; }
+};
+uint64_t ValidationLength(FEXCore::Frontend::Decoder::DecodedBlocks Block) {
+  uint8_t bytes[16] = {0x0f, 0x04};
+  Block.Entry = reinterpret_cast<uintptr_t>(bytes);
+  FEXCore::X86Tables::DecodedInst instruction {0};
+  const auto* DecodedInfo = &instruction;
+  uint64_t BlockInstructionsLength = 0, InstAddress = Block.Entry, GuestRIP = Block.Entry;
+  int GPRSize = 8;
+  bool WantsDiskCachePatching = false;
+  struct { int SMCChecks = 0; } Config;
+  TestDispatcher dispatcher;
+  struct { TestDispatcher* OpDispatcher; } thread {&dispatcher};
+  auto* Thread = &thread;
+''' + validation + r'''
+  return dispatcher.Length;
+}
+using ULONG = uint32_t;
+constexpr ULONG PAGE_READONLY=2, PAGE_READWRITE=4, PAGE_WRITECOPY=8, PAGE_EXECUTE=16;
+constexpr ULONG PAGE_EXECUTE_READ=32, PAGE_EXECUTE_READWRITE=64, PAGE_EXECUTE_WRITECOPY=128;
+namespace LogMan { namespace Msg { template<class... T> void DFmt(const char*, T...) {} } }
+namespace FEXCore { template<class T> struct IntervalList { struct Interval { T Base, End; }; }; }
+struct TestIntervals {
+  bool Present = true;
+  template<class T> void Insert(T) { Present = true; }
+  template<class T> void Remove(T) { Present = false; }
+  template<class T> bool Intersect(T) { return Present; }
+};
+class InvalidationTracker {
+public:
+  void HandleMemoryProtectionNotification(uint64_t Address, uint64_t Size, ULONG Prot);
+  void ForgetTrapped(uint64_t, uint64_t) {}
+  void ExecutableRangeRemoved() { ++Epoch; }
+  void InvalidateIntervalInternal(uint64_t, uint64_t) { ++Invalidations; }
+  struct { bool IsVolatileRange(uint64_t, uint64_t) { return true; } } CTX;
+  TestIntervals XIntervals, RWXIntervals, DEPPromotedIntervals;
+  bool DEPDisabled = false;
+  std::shared_mutex IntervalsLock;
+  int Invalidations = 0, Epoch = 0;
+};
+''' + function(tracker, "static bool ProtHasExec(") + "\n" + function(tracker, "static bool ProtIsReadable(") + "\n" + function(tracker, "static bool ProtIsWritable(") + "\n" + function(tracker, "void InvalidationTracker::HandleMemoryProtectionNotification(") + r'''
+bool AcceptDiskHit(std::vector<uint64_t> pages) {
+  struct { std::vector<uint64_t> GuestPages; } hit {pages};
+  auto* Hit = &hit;
+  struct { bool IsValidating() { return false; } } DiskCache;
+  auto IsVolatileCode = [](uint64_t page) { return page == 0x1000; };
+''' + disk_guard + r'''
+    return true;
+  }
+  return false;
+}
 struct TestBlock { uint64_t Size; uint64_t NumInstructions; bool ForceFullSMCDetection; };
 __attribute__((noinline)) uint64_t Sample(uint64_t GuestRIP, uint64_t size) {
   const TestBlock Block {size, 0, false};
@@ -171,6 +268,37 @@ int main(int argc, char** argv) {
     assert(output.find("c0000005@site:2") != std::string::npos);
     assert(output.find("40000005@site:1") != std::string::npos);
     assert(output.find("80000003@site:1") != std::string::npos);
+  } else if (mode == "reuse_policy") {
+    using Decoder = FEXCore::Frontend::Decoder;
+    Decoder::DecodedBlockInformation info {{{reinterpret_cast<uintptr_t>(Image), 2, false, 0, Decoder::DecodedBlockStatus::SUCCESS}}};
+    const auto ordinary = HashDecodedBlocks(&info);
+    info.Blocks[0].ForceFullSMCDetection = true;
+    assert(HashDecodedBlocks(&info) != ordinary);
+    info.Blocks[0].Size = 0;
+    info.Blocks[0].BlockStatus = Decoder::DecodedBlockStatus::INVALID_INST;
+    info.Blocks[0].FailExaminedSize = 2;
+    const auto illegal = HashDecodedBlocks(&info);
+    info.Blocks[0].BlockStatus = Decoder::DecodedBlockStatus::NOEXEC_INST;
+    assert(HashDecodedBlocks(&info) != illegal);
+  } else if (mode == "permissions") {
+    InvalidationTracker tracker;
+    tracker.HandleMemoryProtectionNotification(0x1000, 4096, PAGE_READWRITE);
+    assert(tracker.Epoch == 1 && tracker.Invalidations == 1);
+    tracker.HandleMemoryProtectionNotification(0x1000, 4096, PAGE_EXECUTE_READWRITE);
+    assert(tracker.Invalidations == 2);
+  } else if (mode == "failed_decode") {
+    using Decoder = FEXCore::Frontend::Decoder;
+    Decoder::DecodedBlocks block {0, 0, true, 2, Decoder::DecodedBlockStatus::INVALID_INST};
+    assert(ValidationLength(block) == 2);
+    block.BlockStatus = Decoder::DecodedBlockStatus::UNIMPLEMENTED_INST;
+    assert(ValidationLength(block) == 2);
+    block.BlockStatus = Decoder::DecodedBlockStatus::NOEXEC_INST;
+    assert(ValidationLength(block) == 0);
+    block.BlockStatus = Decoder::DecodedBlockStatus::PARTIAL_DECODE_INST;
+    assert(ValidationLength(block) == 0);
+  } else if (mode == "disk_cache") {
+    assert(AcceptDiskHit({0x2000}));
+    assert(!AcceptDiskHit({0x0000, 0x1000}));
   } else return 2;
   munmap(Image, 2 * Page);
 }
@@ -210,6 +338,18 @@ class RegressionTests(unittest.TestCase):
 
     def test_exception_keys_and_output_preserve_complete_status(self):
         self.check_case("exceptions")
+
+    def test_reuse_hash_includes_smc_and_exception_policy(self):
+        self.check_case("reuse_policy")
+
+    def test_volatile_protection_changes_invalidate_decoder_permissions(self):
+        self.check_case("permissions")
+
+    def test_failed_decode_validates_examined_bytes_but_not_inaccessible_bytes(self):
+        self.check_case("failed_decode")
+
+    def test_disk_cache_cannot_restore_code_for_volatile_pages(self):
+        self.check_case("disk_cache")
 
 
 if __name__ == "__main__":

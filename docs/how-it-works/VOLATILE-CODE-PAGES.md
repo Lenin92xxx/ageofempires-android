@@ -81,6 +81,10 @@ hash all still match. In a loading match it served ~73 % of volatile visits (~13
 - An ordinary block stops before volatile code. A crossing entry instruction uses FEX's existing runtime SMC checks.
   Further instructions on the volatile page exit through the dispatcher.
 - Diagnostic byte samples read no more than the decoded block size. Failed decodes with no valid bytes produce a zero sample.
+- Translation reuse checks the SMC policy, decode status, and examined-byte count as well as the instruction bytes.
+  Disk-cache hits that touch volatile pages require a fresh compile.
+- Protection changes still invalidate cached translations and reset decoder permissions, including on volatile pages.
+- Invalid crossing instructions validate their examined bytes. Execute-permission failures do not read inaccessible bytes or request zero-byte validation.
 
 ## Diagnostics (patches 0018 and 0019)
 
@@ -127,4 +131,5 @@ python3 tools/tests/test_volatile_patches.py /path/to/patched/FEX
 The host needs Python 3 and a C++20 compiler. The script uses the FEX checkout's existing fmt headers.
 The tests compile the affected production source fragments with small compatibility stubs.
 They check boundary reads, crossing entry instructions, inaccessible image headers, and complete exception codes.
+They also check reuse policy, disk-cache filtering, protection changes, and failed-decode validation.
 They do not execute Windows/FEX or measure game performance.
