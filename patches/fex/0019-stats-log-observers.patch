@@ -1,19 +1,19 @@
 --- a/FEXCore/Source/Interface/Core/Core.cpp
 +++ b/FEXCore/Source/Interface/Core/Core.cpp
-@@ -133,6 +133,12 @@ struct VolatileCodeStatsT {
+@@ -131,6 +131,12 @@
+   uint64_t AllocTicks[32];
+   uint64_t AllocSize[32];
  } VolatileCodeStats = {0x3145444F434C4F56ULL, 0, {}, {}, 0, 0, 0, 0, {}, {}};
- }
- 
++}
++
 +// Patch 0019 (diagnostic): observers the Windows frontend's statistics log can set.
 +extern "C" {
 +void (*FEXVolatileCompileObserver)(uint64_t GuestRIP) = nullptr;
 +void (*FEXDiskCacheHitObserver)(uint64_t GuestRIP) = nullptr;
-+}
-+
+ }
+ 
  // Experiment: reuse of translations when the same guest bytes come back (see TryReuseBlock).
- extern "C" {
- struct CodeReuseStatsT {
-@@ -1042,6 +1048,9 @@ uintptr_t ContextImpl::CompileVolatileBlock(FEXCore::Core::InternalThreadState*
+@@ -1042,6 +1048,9 @@
    }
  
    // Compile for this visit only: no lookup cache entry, no executable-range tracking (so no write trap).
@@ -23,7 +23,7 @@
    Thread->FrontendDecoder->SetupDecodeInstructionsAtEntry(Thread, GuestRIP, 2);
    FEXCORE_PROFILE_INSTANT_INCREMENT(Thread, AccumulatedJITCount, 1);
    auto [CompiledCode, DebugData, StartAddr, Length, NeedsAddGuestCodeRanges] = CompileCode(Thread, GuestRIP, 2);
-@@ -1201,6 +1210,9 @@ uintptr_t ContextImpl::CompileBlock(FEXCore::Core::CpuStateFrame* Frame, uint64_
+@@ -1201,6 +1210,9 @@
          LOGMAN_THROW_A_FMT(CachedHostCode != 0, "Couldn't find GuestRIP in Disk Cache entrypoints!");
  
          FEXCORE_PROFILE_INSTANT_INCREMENT(Thread, AccumulatedDiskCacheHitCount, 1);
@@ -35,7 +35,7 @@
          Thread->FrontendDecoder->ValidateDisownedOrFree();
 --- a/Source/Windows/ARM64EC/Module.cpp
 +++ b/Source/Windows/ARM64EC/Module.cpp
-@@ -813,6 +813,9 @@ static void FastRaiseTo(EXCEPTION_RECORD& GuestRec, ARM64_NT_CONTEXT& GuestConte
+@@ -813,6 +813,9 @@
    NtRaiseExceptionNative(&GuestRec, &GuestContext, FirstChance);
  }
  
@@ -45,7 +45,7 @@
  struct FastTrapStatsType {
    uint64_t Marker; // "FASTTRP1"
    uint64_t Taken;
-@@ -865,6 +868,9 @@ extern "C" __attribute__((noreturn)) void FastTrapEntry() {
+@@ -865,6 +868,9 @@
      GuestContext.Pc -= 1;
    }
    __atomic_fetch_add(&FastTrapStats.Taken, 1, __ATOMIC_RELAXED);
@@ -55,17 +55,17 @@
    FastRaiseOrNative(GuestRec, GuestContext, FirstChance);
    __builtin_unreachable();
  }
-@@ -895,6 +901,9 @@ static void RethrowGuestException(const EXCEPTION_RECORD& Rec, ARM64_NT_CONTEXT&
+@@ -894,6 +900,9 @@
+   } else if (GuestRec.ExceptionCode == EXCEPTION_BREAKPOINT) {
      // INT3 will set RIP to the instruction following it, undo this (any edge cases with multibyte instructions that trigger breakpoints are bugs present in Windows also)
      GuestContext.Pc -= 1;
-   }
++  }
 +  if (GuestExceptionObserver) {
 +    GuestExceptionObserver(GuestRec.ExceptionCode, GuestContext.Pc, false);
-+  }
+   }
  
    // Patch 0017 (fast raise): place the dispatcher frame on the guest stack below the x64 red zone and enter
-   // KiUserExceptionDispatcher directly, as HandleSyscall does, instead of the unix NtRaiseException. A debugger does
-@@ -1207,6 +1216,19 @@ extern "C" void SyncThreadContext(CONTEXT* Context) {
+@@ -1207,6 +1216,19 @@
  extern "C" NTSTATUS WINAPI NtResumeThread(HANDLE, PULONG);
  extern "C" NTSTATUS WINAPI NtOpenThread(PHANDLE, ACCESS_MASK, const OBJECT_ATTRIBUTES*, const CLIENT_ID*);
  
@@ -85,7 +85,7 @@
  namespace StatsLog {
  constexpr uint32_t MaxSlots = 4096;
  constexpr uint32_t MaxSampledThreads = 4;
-@@ -1373,9 +1395,21 @@ const ModuleRec* FindModule(uint64_t Address) {
+@@ -1373,9 +1395,21 @@
    ModuleRec M;
    M.Base = reinterpret_cast<uint64_t>(MBI.AllocationBase);
    if (MBI.Type != MEM_IMAGE) {
@@ -110,7 +110,7 @@
      Modules.push_back(std::move(M));
      return &Modules.back();
    }
-@@ -1415,9 +1449,6 @@ fextl::string Describe(uint64_t Address) {
+@@ -1426,9 +1460,6 @@
    if (!M) {
      return fextl::fmt::format("{:x}", Address);
    }
@@ -120,10 +120,14 @@
    return fextl::fmt::format("{}+{:x}", M->Name, Address - M->Base);
  }
  
-@@ -1431,6 +1462,236 @@ fextl::string TopList(const fextl::unordered_map<uint64_t, uint32_t>& Hist, uint
-   return Out;
- }
- 
+@@ -1438,6 +1469,249 @@
+   fextl::string Out;
+   for (size_t i = 0; i < Items.size() && i < Count; i++) {
+     Out += fextl::fmt::format(" {}:{}%", Describe(Items[i].first), Total ? (Items[i].second * 100 + Total / 2) / Total : 0);
++  }
++  return Out;
++}
++
 +// Patch 0019 (diagnostic): where the SMC write faults land, which code is compiled for one visit in volatile regions
 +// (patch 0012), and which blocks are loaded back from the disk cache after an invalidation.
 +struct PageStat {
@@ -190,17 +194,30 @@
 +  AddRip(VolTable, Rip, VolOverflow);
 +}
 +
-+RipStat ExcTable[RipTableSize];
++struct ExceptionStat {
++  uint64_t Rip;
++  uint64_t Count;
++  uint32_t Code;
++};
++ExceptionStat ExcTable[RipTableSize];
 +uint64_t ExcCount {}, ExcSlow {}, ExcOverflow {};
 +std::mutex ExcMutex;
 +
 +void OnGuestException(uint32_t Code, uint64_t Rip, bool Fast) {
-+  // Key: code in the top byte (low byte of the NTSTATUS), RIP in the low 56 bits.
-+  const uint64_t Key = (static_cast<uint64_t>(Code & 0xff) << 56) | (Rip & 0x00ffffffffffffffULL);
 +  std::scoped_lock Lock(ExcMutex);
 +  ExcCount++;
 +  ExcSlow += !Fast;
-+  AddRip(ExcTable, Key, ExcOverflow);
++  const size_t H = HashSlot(Rip ^ (static_cast<uint64_t>(Code) << 32), RipTableSize);
++  for (size_t i = 0; i < 32; i++) {
++    auto& E = ExcTable[(H + i) & (RipTableSize - 1)];
++    if (!E.Count || (E.Rip == Rip && E.Code == Code)) {
++      E.Rip = Rip;
++      E.Code = Code;
++      E.Count++;
++      return;
++    }
++  }
++  ExcOverflow++;
 +}
 +
 +void OnDiskCacheHit(uint64_t Rip) {
@@ -303,7 +320,7 @@
 +    Out += fextl::fmt::format("D hits={} rips={} overflow={} top:{}\n", DH, DC.size(), DO, Top(DC, 10));
 +  }
 +  {
-+    fextl::vector<RipStat> Exc;
++    fextl::vector<ExceptionStat> Exc;
 +    uint64_t EC, ES, EO;
 +    {
 +      std::scoped_lock Lock(ExcMutex);
@@ -311,7 +328,7 @@
 +      ES = ExcSlow;
 +      EO = ExcOverflow;
 +      for (auto& E : ExcTable) {
-+        if (E.Rip) {
++        if (E.Count) {
 +          Exc.push_back(E);
 +        }
 +      }
@@ -319,10 +336,10 @@
 +      ExcCount = ExcSlow = ExcOverflow = 0;
 +    }
 +    if (EC) {
-+      std::sort(Exc.begin(), Exc.end(), [](const RipStat& A, const RipStat& B) { return A.Count > B.Count; });
++      std::sort(Exc.begin(), Exc.end(), [](const ExceptionStat& A, const ExceptionStat& B) { return A.Count > B.Count; });
 +      Out += fextl::fmt::format("X exceptions={} slow={} sites={} overflow={} top:", EC, ES, Exc.size(), EO);
 +      for (size_t i = 0; i < Exc.size() && i < 10; i++) {
-+        Out += fextl::fmt::format(" c0000{:02x}@{}:{}", Exc[i].Rip >> 56, Describe(Exc[i].Rip & 0x00ffffffffffffffULL), Exc[i].Count);
++        Out += fextl::fmt::format(" {:08x}@{}:{}", Exc[i].Code, Describe(Exc[i].Rip), Exc[i].Count);
 +      }
 +      Out += "\n";
 +    }
@@ -350,14 +367,10 @@
 +      Out += fextl::fmt::format("VR {} base={:x} size={:x} {} ({})\n", i, Base, Ld(VolatileCodeStats.RegionSize[i]), Describe(Base), PageInfo(Base));
 +    }
 +    LastVolRegions = Regions;
-+  }
-+  return Out;
-+}
-+
- double Seconds() {
-   return static_cast<double>(FEXCore::SHMStats::GetCycleCounter() - StartCycles) /
-          static_cast<double>(FEXCore::Utils::SpinWaitLock::CycleCounterFrequency);
-@@ -1523,6 +1784,7 @@ void Report(double Now, double IntervalSeconds) {
+   }
+   return Out;
+ }
+@@ -1534,6 +1808,7 @@
      }
      Out += "\n";
    }
@@ -365,7 +378,7 @@
    Write(Out);
  }
  
-@@ -1565,7 +1827,11 @@ void* LoggerMain(void*) {
+@@ -1576,7 +1851,11 @@
      }
      if (Now - LastReport >= 1.0) {
        for (auto& R : Recs) {
@@ -378,7 +391,7 @@
          R.Delta = {Cur.CPU100ns - R.Last.CPU100ns,
                     Cur.JITCycles - R.Last.JITCycles,
                     Cur.JITCount - R.Last.JITCount,
-@@ -1663,7 +1929,11 @@ void Init(const fextl::string& ExeName) {
+@@ -1674,7 +1953,11 @@
    }
    Enabled = true;
    StartCycles = FEXCore::SHMStats::GetCycleCounter();
@@ -393,7 +406,7 @@
  }
 --- a/Source/Windows/Common/InvalidationTracker.cpp
 +++ b/Source/Windows/Common/InvalidationTracker.cpp
-@@ -221,6 +221,8 @@ void InvalidationTracker::ReprotectRWXIntervals(uint64_t Address, uint64_t Size)
+@@ -221,6 +221,8 @@
    ProtectRWXIntervalsInternal(Address, Size, false);
  }
  
@@ -402,7 +415,7 @@
  bool InvalidationTracker::HandleRWXAccessViolation(FEXCore::Core::InternalThreadState* Thread, uint64_t HostPc, uint64_t FaultAddress) {
    const auto [NeedsInvalidate, UntrapProt] = [&](uint64_t Address) -> std::pair<bool, ULONG> {
      std::shared_lock Lock(IntervalsLock);
-@@ -231,6 +233,9 @@ bool InvalidationTracker::HandleRWXAccessViolation(FEXCore::Core::InternalThread
+@@ -231,6 +233,9 @@
    }(FaultAddress);
  
    if (NeedsInvalidate) {
@@ -414,7 +427,7 @@
        std::scoped_lock Lock(CTX.GetCodeInvalidationMutex());
 --- a/Source/Windows/Common/InvalidationTracker.h
 +++ b/Source/Windows/Common/InvalidationTracker.h
-@@ -17,6 +17,9 @@ class Context;
+@@ -17,6 +17,9 @@
  }
  
  namespace FEX::Windows {
