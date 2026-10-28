@@ -81,7 +81,7 @@
  }
  
  // Patch 0019 (diagnostic): observers the Windows frontend's statistics log can set.
-@@ -160,31 +179,109 @@
+@@ -160,31 +179,116 @@
    return Enabled;
  }
  
@@ -135,6 +135,13 @@
 +    HashMix(H, Block.ForceFullSMCDetection);
 +    HashMix(H, static_cast<uint64_t>(Block.BlockStatus));
 +    HashMix(H, Block.FailExaminedSize);
++    // A rejected entry has Size == 0, but its generated SMC check depends on the examined instruction bytes.
++    // NOEXEC/PARTIAL_DECODE bytes may be inaccessible and must not be read here.
++    if (!Block.Size && Block.FailExaminedSize &&
++        (Block.BlockStatus == Frontend::Decoder::DecodedBlockStatus::INVALID_INST ||
++         Block.BlockStatus == Frontend::Decoder::DecodedBlockStatus::UNIMPLEMENTED_INST)) {
++      HashGuestRange(H, Block.Entry, Block.FailExaminedSize);
++    }
    }
    return H;
  }
@@ -210,7 +217,7 @@
  
  struct GetFrameBlockInfoResult {
    const CPU::CPUBackend::JITCodeHeader* InlineHeader;
-@@ -524,6 +621,10 @@
+@@ -524,6 +628,10 @@
  void ContextImpl::DestroyThread(FEXCore::Core::InternalThreadState* Thread) {
    FEXCore::Allocator::VirtualProtect(&Thread->InterruptFaultPage, sizeof(Thread->InterruptFaultPage),
                                       Allocator::ProtectOptions::Read | Allocator::ProtectOptions::Write);
@@ -221,16 +228,19 @@
    delete Thread;
  }
  
-@@ -728,15 +829,20 @@
+@@ -728,15 +836,23 @@
            Thread->OpDispatcher->_GuestOpcode(InstAddress - GuestRIP);
          }
  
 -        if (Config.SMCChecks == FEXCore::Config::CONFIG_SMC_FULL || Block.ForceFullSMCDetection) {
 +        // A rejected instruction has InstSize == 0. Validate the accessible bytes that made it invalid, but do not
 +        // read bytes that failed an execute-permission check (NOEXEC/PARTIAL_DECODE); those faults rely on permissions.
++        // A zero-size invalid tail only exits to its address; it is not executed in this block and is not part
++        // of the volatile byte ranges. Only an invalid entry emits a trap here and needs its examined bytes checked.
 +        const auto CodeValidationSize = DecodedInfo->InstSize ? DecodedInfo->InstSize :
-+          (Block.BlockStatus == Frontend::Decoder::DecodedBlockStatus::INVALID_INST ||
-+           Block.BlockStatus == Frontend::Decoder::DecodedBlockStatus::UNIMPLEMENTED_INST) ? Block.FailExaminedSize : 0;
++          (Block.NumInstructions == 1 &&
++           (Block.BlockStatus == Frontend::Decoder::DecodedBlockStatus::INVALID_INST ||
++            Block.BlockStatus == Frontend::Decoder::DecodedBlockStatus::UNIMPLEMENTED_INST)) ? Block.FailExaminedSize : 0;
 +        if ((Config.SMCChecks == FEXCore::Config::CONFIG_SMC_FULL || Block.ForceFullSMCDetection) && CodeValidationSize) {
            auto ExistingCodePtr = reinterpret_cast<uint8_t*>(Block.Entry + BlockInstructionsLength);
            auto InstAddressReg = Thread->OpDispatcher->_EntrypointOffset(GPRSize, InstAddress - GuestRIP);
@@ -246,7 +256,7 @@
  
            auto InvalidateCodeCond = Thread->OpDispatcher->CondJump(CodeChanged);
  
-@@ -945,21 +1051,78 @@
+@@ -945,21 +1061,78 @@
    return false;
  }
  
@@ -330,7 +340,7 @@
  
  static uint64_t VolatileKeyHash(const uint8_t* Bytes, uint8_t Len, uint64_t Target) {
    uint64_t H = 0xcbf29ce484222325ULL ^ Target;
-@@ -973,10 +1136,100 @@
+@@ -973,10 +1146,100 @@
  // form [one position-independent instruction][jmp rel8/rel32 out of the region] produce the same host code wherever they
  // are (the JIT resolves the exit to an absolute target), so they are cached by content for the thread's current code
  // buffer. Anything else is compiled for this one visit.
@@ -433,7 +443,7 @@
    Thread->FrontendDecoder->DecodeLoop(reinterpret_cast<const uint8_t*>(GuestRIP));
    const auto* BlockInfo = Thread->FrontendDecoder->GetDecodedBlockInfo();
  
-@@ -984,16 +1237,52 @@
+@@ -984,16 +1247,52 @@
    uint8_t Len = 0;
    uint8_t Bytes[15] {};
    uint64_t Target = 0;
@@ -491,7 +501,7 @@
        if (I0.TableInfo && I1.TableInfo && I0.PC == GuestRIP && I0.InstSize > 0 && I0.InstSize <= 15 &&
            !(I0.TableInfo->Flags & (FEXCore::X86Tables::InstFlags::FLAGS_SETS_RIP | FEXCore::X86Tables::InstFlags::FLAGS_BLOCK_END)) &&
            !PositionDependent(I0.Dest) && !PositionDependent(I0.Src[0]) && !PositionDependent(I0.Src[1]) &&
-@@ -1014,18 +1303,53 @@
+@@ -1014,18 +1313,53 @@
            Target = GuestRIP + I0.InstSize + I1.InstSize + Disp;
            Len = I0.InstSize;
            memcpy(Bytes, P0, Len);
@@ -549,7 +559,7 @@
        if (!VolatileCache.empty()) {
          const uint64_t H = VolatileKeyHash(Bytes, Len, Target);
          for (size_t i = 0; i < 8; i++) {
-@@ -1047,13 +1371,61 @@
+@@ -1047,13 +1381,61 @@
      }
    }
  
@@ -613,7 +623,7 @@
    auto CodePtr = CompiledCode.EntryPoints[GuestRIP];
    if (CodePtr == nullptr) {
      return 0;
-@@ -1066,7 +1438,10 @@
+@@ -1066,7 +1448,10 @@
    Thread->FrontendDecoder->ValidateDisownedOrFree();
    Thread->OpDispatcher->ValidateDisownedOrFree();
  
@@ -625,7 +635,7 @@
      const void* Buffer = Thread->CPUBackend->GetCurrentCodeBufferPtr();
      const uint64_t Generation = Thread->CPUBackend->GetCurrentCodeBufferGeneration();
      std::scoped_lock lk(VolatileCacheMutex);
-@@ -1094,6 +1469,37 @@
+@@ -1094,6 +1479,37 @@
      __atomic_fetch_add(&VolatileCodeStats.Misses, 1, __ATOMIC_RELAXED);
    } else {
      __atomic_fetch_add(&VolatileCodeStats.Ineligible, 1, __ATOMIC_RELAXED);
@@ -663,7 +673,7 @@
    }
    return reinterpret_cast<uintptr_t>(CodePtr);
  }
-@@ -1160,6 +1566,14 @@
+@@ -1160,6 +1576,14 @@
  
    static_cast<ContextImpl*>(Thread->CTX)->SyscallHandler->PreCompile();
  
@@ -678,7 +688,7 @@
    // Invalidate might take a unique lock on this, to guarantee that during invalidation no code gets compiled
    auto lk = GuardSignalDeferringSection<std::shared_lock>(CodeInvalidationMutex, Thread);
  
-@@ -1187,7 +1601,9 @@
+@@ -1187,7 +1611,9 @@
    {
      FEXCORE_PROFILE_ACCUMULATION(Thread, AccumulatedDiskCacheLookupTime);
      Hit = DiskCache.Lookup(Thread, Region, GuestRIP, DiskCacheGuestCodeKey);

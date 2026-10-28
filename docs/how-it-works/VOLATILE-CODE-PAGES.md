@@ -82,9 +82,11 @@ hash all still match. In a loading match it served ~73 % of volatile visits (~13
   Further instructions on the volatile page exit through the dispatcher.
 - Diagnostic byte samples read no more than the decoded block size. Failed decodes with no valid bytes produce a zero sample.
 - Translation reuse checks the SMC policy, decode status, and examined-byte count as well as the instruction bytes.
+  A failed entry also hashes the accessible bytes that caused the rejection.
   Disk-cache hits that touch volatile pages require a fresh compile.
 - Protection changes still invalidate cached translations and reset decoder permissions, including on volatile pages.
 - Invalid crossing instructions validate their examined bytes. Execute-permission failures do not read inaccessible bytes or request zero-byte validation.
+  An invalid tail only ends the block. Its trap and byte validation belong to a separate compile at that address.
 
 ## Diagnostics (patches 0018 and 0019)
 

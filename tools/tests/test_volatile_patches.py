@@ -62,6 +62,7 @@ def harness(tree):
 #include <fmt/format.h>
 #include <algorithm>
 #include <cassert>
+#include <csignal>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -119,6 +120,7 @@ struct Decoder {
     bool ForceFullSMCDetection;
     uint8_t FailExaminedSize;
     DecodedBlockStatus BlockStatus;
+    uint64_t NumInstructions = 1;
   };
   struct DecodedBlockInformation { std::vector<DecodedBlocks> Blocks; };
 };
@@ -132,14 +134,14 @@ struct TestDispatcher {
   uint64_t _EntrypointOffset(int, uint64_t address) { return address; }
   uint64_t _PatchableGuestCRC(IR::OpSize, uint64_t hash, int64_t, uint64_t) { return hash; }
   uint64_t Constant(uint64_t value) { return value; }
-  uint64_t _ValidateCode(uint64_t, uint64_t, uint64_t size) { Length = size; return 0; }
+  uint64_t _ValidateCode(uint64_t, uint64_t, uint64_t size) { assert(size > 0); Length = size; return 0; }
 };
 uint64_t ValidationLength(FEXCore::Frontend::Decoder::DecodedBlocks Block) {
   uint8_t bytes[16] = {0x0f, 0x04};
   Block.Entry = reinterpret_cast<uintptr_t>(bytes);
   FEXCore::X86Tables::DecodedInst instruction {0};
   const auto* DecodedInfo = &instruction;
-  uint64_t BlockInstructionsLength = 0, InstAddress = Block.Entry, GuestRIP = Block.Entry;
+  uint64_t BlockInstructionsLength = Block.Size, InstAddress = Block.Entry + Block.Size, GuestRIP = Block.Entry;
   int GPRSize = 8;
   bool WantsDiskCachePatching = false;
   struct { int SMCChecks = 0; } Config;
@@ -221,6 +223,7 @@ fextl::string ExceptionOutput() {
   return Out;
 }
 int main(int argc, char** argv) {
+  for (int sig : {SIGSEGV, SIGBUS, SIGABRT}) std::signal(sig, [](int value) { _exit(128 + value); });
   struct rlimit limit {0, 0};
   setrlimit(RLIMIT_CORE, &limit);
   assert(argc == 2);
@@ -299,6 +302,17 @@ int main(int argc, char** argv) {
   } else if (mode == "disk_cache") {
     assert(AcceptDiskHit({0x2000}));
     assert(!AcceptDiskHit({0x0000, 0x1000}));
+  } else if (mode == "failed_entry_hash") {
+    using Decoder = FEXCore::Frontend::Decoder;
+    Image[0] = 0x0f; Image[1] = 0x04;
+    Decoder::DecodedBlockInformation info {{{reinterpret_cast<uintptr_t>(Image), 0, true, 2, Decoder::DecodedBlockStatus::INVALID_INST}}};
+    const auto before = HashDecodedBlocks(&info);
+    Image[1] = 0x0a;
+    assert(HashDecodedBlocks(&info) != before);
+  } else if (mode == "failed_tail") {
+    using Decoder = FEXCore::Frontend::Decoder;
+    Decoder::DecodedBlocks block {0, 1, true, 2, Decoder::DecodedBlockStatus::INVALID_INST, 2};
+    assert(ValidationLength(block) == 0);
   } else return 2;
   munmap(Image, 2 * Page);
 }
@@ -350,6 +364,12 @@ class RegressionTests(unittest.TestCase):
 
     def test_disk_cache_cannot_restore_code_for_volatile_pages(self):
         self.check_case("disk_cache")
+
+    def test_reuse_hash_tracks_examined_failed_entry_bytes(self):
+        self.check_case("failed_entry_hash")
+
+    def test_invalid_tail_has_no_crc_dependency_outside_volatile_cache_ranges(self):
+        self.check_case("failed_tail")
 
 
 if __name__ == "__main__":
